@@ -1,2 +1,4 @@
 # goldensalvage
 Tool which identifies hidden gems in vehicle auctions based on misreported mileage
+
+This tool parses vehicle auctions for vehicles matching a specific filter defined by the user. Afterwards, the VINs of the vehicles are funneled through CarFax in order to determine whether the car may potentially be worth acquiring. The vehicle's last known mileage is not available on the auction site because the tool filters to only vehicles which have a malfunctioning odometer. Thus, most users on the website may lowball or skip over these cars, as time is needed to manually verify the mileage of these vehicles. However, by scraping CarFax, we can automate this process. In the end, the tool will also upload the results to a sheet on Google Sheets automatically, so that a human may review only the potentially valid vehicles. 
