@@ -6,6 +6,7 @@ from google.oauth2.service_account import Credentials
 from googleapiclient.discovery import build
 import datetime
 import pytz
+import shutil
 
 SERVICE_ACCOUNT_FILE = 'gkey.json'
 SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
@@ -79,6 +80,17 @@ def dataProcessor(data):
     for vehicle in data:
         pass
 
+def renamer(directory, original_prefix, new_prefix):
+    files = [os.path.join(directory, file) for file in os.listdir(directory) if file.startswith(original_prefix)]
+    files = [file for file in files if os.path.isfile(file)]
+    if not files:
+        print(f"No files starting with prefix '{original_prefix}' found in the directory.")
+        return
+    last_modified_file = max(files, key=os.path.getmtime)
+    new_filename = os.path.join(directory, new_prefix + os.path.basename(last_modified_file)[len(original_prefix):])
+    os.rename(last_modified_file, new_filename)
+    print(f"Renamed '{os.path.basename(last_modified_file)}' to '{os.path.basename(new_filename)}'.")
+
 
 
 def handler(bypass=False):
@@ -93,8 +105,9 @@ def handler(bypass=False):
     else:
         #dataProcessor(data)
         append_data_to_sheet(service, SPREADSHEET_ID, data)
+        renamer('./processed', 'carArr', 'f-carArr')
         print("finish main")
         return True
     
 if __name__ == "__main__":
-    handler(True)
+    handler()

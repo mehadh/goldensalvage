@@ -30,6 +30,22 @@ def getReading(html_content):
     print("reading not fine")
     return None
 
+def getReadingArr(html_content):
+    soup = BeautifulSoup(html_content, 'html.parser')
+    odometer_readings = soup.find_all(class_=["record-odometer-reading", "narrow-record-odometer-reading"])
+    odometer_values = []
+    for reading in odometer_readings:
+        value = reading.get_text(strip=True)
+        try:
+            value = int(value)
+        except ValueError:
+            pass
+        odometer_values.append(value)
+    #print("odometer dump::")
+    #print(odometer_values)
+    highest_mileage = max([int(mileage.strip('mi').replace(',', '')) for mileage in odometer_values if 'not reported' not in mileage], default=None)
+    return highest_mileage
+
 def checkBranded(html):
     #soup = BeautifulSoup(html, "html.parser")
     #count = html.count("total loss vehicle")
@@ -145,13 +161,13 @@ def dataProcessor(driver, data):
             is_first_bad_entry = False
             print("excluded", vehicle["vin"], "pagesrc")
         else:
-            odometerInt = getReading(pageSrc)
+            odometerInt = getReadingArr(pageSrc)
             if odometerInt == None:
                 vehicle["reason"] = "reading not fine"
                 append_to_file(badPath, vehicle, is_first_bad_entry)
                 is_first_bad_entry = False
                 print("excluded", vehicle["vin"], "not find reading")
-            elif odometerInt > 120000:
+            elif odometerInt > 132000: # MILE EXCLUSION INT
                 vehicle["reason"] = "mile exclusion"
                 append_to_file(badPath, vehicle, is_first_bad_entry)
                 is_first_bad_entry = False
@@ -202,7 +218,11 @@ def find_latest_file(directory, file_prefix):
             if latest_time is None or file_time > latest_time:
                 latest_time = file_time
                 latest_file_name = file_name
-    return "{}/".format(directory)+latest_file_name
+    if latest_file_name != None:
+        return "{}/".format(directory)+latest_file_name
+    else:
+        print("no file for use")
+        quit()
 
 
 def handler(bypass=False):
@@ -228,6 +248,23 @@ def handler(bypass=False):
             print("finish main")
             return True
 
+def testOneVin(vin):
+    initVars("./credentials.json")
+    driver = login(cEmail, cPass)
+    if driver == False:
+        print("unable to continue : driver false")
+        quit()
+    else:
+        pageSrc = getVinPage(driver, vin)
+        if pageSrc == False:
+            print("pagesrc bad")
+        else:
+            odometerInt = getReading(pageSrc)
+            readingarr = getReadingArr(pageSrc)
+            resultCheck = checkBranded(pageSrc)
+            print("vin: {} odometer: {} odometer2: {} result: {}".format(vin, odometerInt, readingarr, resultCheck))
+        
+
 def initVars(path):
     global cEmail, cPass
     with open(path, 'r') as file:
@@ -239,6 +276,7 @@ if __name__ == "__main__":
     #fileName = find_latest_file("./raw", "output")
     #print(fileName)
     handler()
+    #testOneVin("2GCEK19T541183036")
     #checkDb()
     #file = input("Input Json: ")
     #data = jsonProcessor(file)

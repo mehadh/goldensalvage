@@ -86,6 +86,7 @@ def applyFilter(driver):
         WebDriverWait(driver, 10).until(
             EC.visibility_of_element_located((By.ID, "SavedSearchListItems"))
         )
+        # automobiles, 0-1 mi, items with a sale date, northeast, clear
         odometer_item = WebDriverWait(driver, 10).until(
             EC.element_to_be_clickable((By.XPATH, "//a[contains(text(), 'Odometer')]"))
         )
@@ -149,13 +150,7 @@ def extract_car_info(html):
         engine = car_row.find('span', title=lambda x: x and x.startswith('Engine:'))
         if engine:
             car['engine'] = engine.get_text(strip=True)
-
-        # current_bid_info = car_row.find(lambda tag: tag.name == "div" and "Current Bid:" in tag.text)
-        # if current_bid_info:
-        #     car['current_bid'] = current_bid_info.text.split("Current Bid:")[-1].strip()
-        # else:
-        #     car['current_bid'] = None
-
+            
         cars.append(car)
     
     return cars
