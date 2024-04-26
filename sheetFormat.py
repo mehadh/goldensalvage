@@ -5,6 +5,7 @@ from carfax import find_latest_file
 from google.oauth2.service_account import Credentials
 from googleapiclient.discovery import build
 import datetime
+from datetime import datetime as dTime
 import pytz
 import shutil
 
@@ -15,6 +16,14 @@ creds = Credentials.from_service_account_file(SERVICE_ACCOUNT_FILE, scopes=SCOPE
 service = build('sheets', 'v4', credentials=creds)
 
 RANGE_NAME = 'A2' # Assuming we start appending from row 2
+
+def format_datetime(date_str, time_str):
+    time_str = str(time_str).split('.')[0]
+    datetime_string = str(date_str) + time_str
+    datetime_object = dTime.strptime(datetime_string, '%Y%m%d%H%M')
+    formatted_datetime = datetime_object.strftime('%m/%d/%Y %I:%M %p')
+    return formatted_datetime
+
 
 def append_data_to_sheet(service, SPREADSHEET_ID, json_data):
     # Find the first free row
@@ -37,15 +46,33 @@ def append_data_to_sheet(service, SPREADSHEET_ID, json_data):
     values_to_append = []
     for item in json_data:
         stock_number = item.get('stock_number', '')
-        hyperlink_formula = f'=HYPERLINK("https://www.iaai.com/Search?searchkeyword={stock_number}", "{stock_number}")'
-        
+        mode = None
+        if item.get('source', '').lower() == 'iaai':
+            url = f'https://www.iaai.com/Search?searchkeyword={stock_number}'
+            mode = "iaai"
+        elif item.get('source', '').lower() == 'copart':
+            url = f'https://www.copart.com/lot/{stock_number}'
+            mode = 'copart'
+        else:
+            url = ''
+        hyperlink_formula = f'=HYPERLINK("{url}", "{stock_number}")'
+        # 'yard': row['Yard name'],
+        # 'sDate': row['Sale Date M/D/CY'],
+        # 'sDay': row['Day of Week'],
+        # 'sTime': row['Sale time (HHMM)'],
+        # 'sTz': row['Time Zone'] 
+        saleTime = format_datetime(item.get('sDate', '19700101'), item.get('sTime', '0000'))
+
         row_data = [
             item.get('title', ''),
             item.get('vin', ''),
             item.get('primary_damage', ''),
             item.get('reason', ''),
             hyperlink_formula,
-            formatted_datetime
+            item.get('yard', ''),
+            saleTime,
+            formatted_datetime,
+            item.get('source', ''),
         ]
         values_to_append.append(row_data)
 
@@ -110,4 +137,5 @@ def handler(bypass=False):
         return True
     
 if __name__ == "__main__":
-    handler()
+    handler(True)
+    #print(format_datetime("20240422", "2100"))

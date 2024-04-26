@@ -124,6 +124,7 @@ def extract_car_info(html):
             'primary_damage': None,
             'odometer': None,
             'engine': None,
+            'source': "IAAI",
             #'current_bid': None
         }
         
@@ -150,7 +151,7 @@ def extract_car_info(html):
         engine = car_row.find('span', title=lambda x: x and x.startswith('Engine:'))
         if engine:
             car['engine'] = engine.get_text(strip=True)
-            
+
         cars.append(car)
     
     return cars

@@ -50,11 +50,11 @@ def checkBranded(html):
     #soup = BeautifulSoup(html, "html.parser")
     #count = html.count("total loss vehicle")
     if "branded title:" in html.lower() or "branded titles:" in html.lower():
-        print("brand check fail")
+        #print("brand check fail")
         return True # branded
     #elif count > 1:
     elif "total loss reported:" in html.lower():
-        print("total loss check fail")
+        #print("total loss check fail")
         return None # total loss brand
     return False
 
@@ -72,9 +72,10 @@ def login(email, password):
         driver.find_element(By.ID, "password").send_keys(password)
         driver.find_element(By.XPATH, "//button[@type='submit']").click()
 
+        #input("Press enter to continue after MFA...")
+
         location_div = WebDriverWait(driver, 10).until(
         EC.presence_of_element_located((By.XPATH, "//*[contains(@class, 'location')]")))
-
         print("Login successful")
         return driver
 
@@ -85,7 +86,7 @@ def login(email, password):
 def getVinPage(driver, vin):
     driver.get("https://www.carfaxonline.com/vhr/{}".format(vin))
     try:
-        vehicle_history_report = WebDriverWait(driver, 10).until(
+        vehicle_history_report = WebDriverWait(driver, 30).until(
         EC.presence_of_element_located((By.ID, "vehicle-history-report"))
         )
         return driver.page_source
@@ -151,7 +152,7 @@ def dataProcessor(driver, data):
     is_first_good_entry = True
     is_first_bad_entry = True
     
-    for vehicle in data:
+    for vehicle in data: # should we multithread the hell otu fo this ? 
         if vehicle["vin"] in vinDb:
             continue
         pageSrc = getVinPage(driver, vehicle["vin"])
@@ -189,7 +190,7 @@ def dataProcessor(driver, data):
                     append_to_file(goodPath, vehicle, is_first_good_entry)
                     is_first_good_entry = False
                     print("included", vehicle["vin"], "good car")
-        time.sleep(2)
+        time.sleep(2) # todo: try remove this 
 
     if is_first_bad_entry == False:
         finalize_files(badPath)
@@ -275,6 +276,7 @@ def initVars(path):
 if __name__ == "__main__":
     #fileName = find_latest_file("./raw", "output")
     #print(fileName)
+    #print(find_latest_file("./", "salesdata"))
     handler()
     #testOneVin("2GCEK19T541183036")
     #checkDb()
