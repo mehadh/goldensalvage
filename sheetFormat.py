@@ -68,6 +68,7 @@ def append_data_to_sheet(service, SPREADSHEET_ID, json_data):
             item.get('vin', ''),
             item.get('primary_damage', ''),
             item.get('reason', ''),
+            item.get('ododate', ''),
             hyperlink_formula,
             item.get('yard', ''),
             saleTime,

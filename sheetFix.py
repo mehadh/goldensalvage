@@ -24,18 +24,28 @@ SHEET_NAME = 'Sheet1'  # Ensure this is your sheet name
 
 def find_and_update_row(service, vehicle_data_list, spreadsheet_id, sheet_name):
     # Fetch the current VINs from the spreadsheet to find the rows that need updating
-    range_to_read = f'{sheet_name}!B2:B'
+    range_to_read = f'{sheet_name}!B2:K'
     result = service.spreadsheets().values().get(spreadsheetId=spreadsheet_id, range=range_to_read).execute()
-    existing_vins = result.get('values', [])
-    existing_vins = [item[0] for item in existing_vins if item]  # Flatten list
+    rows = result.get('values', [])
+    existing_vins = [item[0] for item in rows if item]  # Flatten list
+    #print(existing_vins)
+    status_labels = {"Bidded", "Bought", "Sold", "Bad Vehicle", "WTB"}
+    statuses = [sublist[-1] if sublist[-1] in status_labels else None for sublist in rows]
 
     # Map VINs to their data
     vin_to_data_map = {vehicle['vin']: vehicle for vehicle in vehicle_data_list}
     requests = []
     delete = []
     # Check and update rows where VINs match
-    for index, vin in enumerate(existing_vins):
+    #for index, vin in enumerate(existing_vins):
+    #print(statuses)
+    #return
+    for index, (vin, status) in enumerate(zip(existing_vins, statuses)):
         row_number = index + 2  # Calculate the row number based on index
+        if status == "Bought":
+            print("skipping", vin, "for bought status")
+            continue
+        #print("status: ", status)
         if vin in vin_to_data_map:
             vehicle_data = vin_to_data_map[vin]
             
@@ -60,8 +70,8 @@ def find_and_update_row(service, vehicle_data_list, spreadsheet_id, sheet_name):
                         #"sheetId": spreadsheet_id,
                         "startRowIndex": row_number - 1,
                         "endRowIndex": row_number,
-                        "startColumnIndex": 5,  # Column F
-                        "endColumnIndex": 7   # Column G
+                        "startColumnIndex": 6,  # Column F SHIFT 1
+                        "endColumnIndex": 8   # Column G SHIFT 1
                     },
                     "rows": [
                         {"values": [{"userEnteredValue": {"stringValue": vehicle_data['yard']}},

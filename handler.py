@@ -3,6 +3,7 @@ from carfax import handler as cHandler
 from sheetFormat import handler as fHandler
 import os, sys
 from copart2 import handler as cpHandler
+from sheetFix import updateLatest
 
 os.chdir(sys.path[0])
 
@@ -15,11 +16,12 @@ def masterHandler():
     #         return False
     runCp = input("Run copart? (yes/no): ")
     if runCp.lower() == 'yes':
-        cpRes = cpHandler()
+        cpRes = cpHandler(True) # pass c300check in here
         if not cpRes:
             print("copart result not come in")
             return False
-    carfaxResult = cHandler(True)
+        updateLatest()
+    carfaxResult = cHandler(True, True)
     if not carfaxResult:
         print("Carfax result not come in")
         return False

@@ -9,16 +9,23 @@ import json
 from carfax import find_latest_file
 
 
-def parseCsv(file_path):
+def parseCsv(file_path, c300Check=False):
     data = pd.read_csv(file_path)
     acceptableTitles = ["ct"]
     acceptableStates = ["ma", "nh", "ri", "ct", "vt", "me", "ny", "nj", "pa", "de", "md", "va", "dc", "wv", "oh", "nc"] # based on distance
     filtered_data = data[data['Sale Date M/D/CY'] != 0]
     filtered_data = filtered_data[filtered_data['Vehicle Type'] == 'V']
-    filtered_data = filtered_data[(filtered_data['Odometer'] >= 0.0) & (filtered_data['Odometer'] <= 11.0)]
     filtered_data = filtered_data[filtered_data['Sale Title Type'].str.lower().isin(acceptableTitles)]
-    filtered_data = filtered_data[filtered_data['Sale Title State'].str.lower().isin(acceptableStates)]
+    
+    if c300Check:
+        filtered_data = filtered_data[filtered_data['Model Group'] == 'C-CLASS']
+        filtered_data = filtered_data[(filtered_data['Year'] >= 2008) & (filtered_data['Year'] <= 2014)]
+        filtered_data = filtered_data[filtered_data['Location state'].str.lower().isin(["ma", "nh", "ri", "ct", "vt", "me"])]
+    else:
+        filtered_data = filtered_data[(filtered_data['Odometer'] >= 0.0) & (filtered_data['Odometer'] <= 11.0)]
+        filtered_data = filtered_data[filtered_data['Location state'].str.lower().isin(acceptableStates)] # this was bad mistake!!!!
     #filtered_data.to_csv('filtered_output.csv', index=False)  
+    print("returning cars amount", len(filtered_data))
     return filtered_data
 
 def toDict(filtered_data):
@@ -42,10 +49,10 @@ def toDict(filtered_data):
     return cars_list
 
 
-def handler():
+def handler(c300Check=False):
     #filepath = input("Point to csv: ")
     filepath = find_latest_file("./", "salesdata")
-    filterData = parseCsv(filepath)
+    filterData = parseCsv(filepath, c300Check)
     dictGrab = toDict(filterData)
     nameFile = outputName()
     with open("./raw/"+nameFile, 'w') as file:

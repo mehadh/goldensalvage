@@ -30,21 +30,51 @@ def getReading(html_content):
     print("reading not fine")
     return None
 
+# def getReadingArr(html_content):
+#     soup = BeautifulSoup(html_content, 'html.parser')
+#     odometer_readings = soup.find_all(class_=["record-odometer-reading", "narrow-record-odometer-reading"])
+#     odometer_values = []
+#     for reading in odometer_readings:
+#         value = reading.get_text(strip=True)
+#         try:
+#             value = int(value)
+#         except ValueError:
+#             pass
+#         odometer_values.append(value)
+#     #print("odometer dump::")
+#     #print(odometer_values)
+#     highest_mileage = max([int(mileage.strip('mi').replace(',', '')) for mileage in odometer_values if 'not reported' not in mileage], default=None)
+#     return highest_mileage
+
 def getReadingArr(html_content):
     soup = BeautifulSoup(html_content, 'html.parser')
-    odometer_readings = soup.find_all(class_=["record-odometer-reading", "narrow-record-odometer-reading"])
+    rows = soup.find_all('tr', class_="detailed-history-row detailed-history-row-main")
     odometer_values = []
-    for reading in odometer_readings:
-        value = reading.get_text(strip=True)
-        try:
-            value = int(value)
-        except ValueError:
-            pass
-        odometer_values.append(value)
-    #print("odometer dump::")
-    #print(odometer_values)
-    highest_mileage = max([int(mileage.strip('mi').replace(',', '')) for mileage in odometer_values if 'not reported' not in mileage], default=None)
-    return highest_mileage
+
+    for row in rows:
+        record_columns = row.find_all('td')
+        if len(record_columns) > 1:
+            # Get only the direct text of the first column, ignoring nested elements
+            first_column = record_columns[0].contents[0].strip() if record_columns[0].contents else ''
+            odometer_reading = record_columns[1].get_text(strip=True).replace('mi', '').replace(',', '').strip()
+
+            # Try to convert the odometer reading to an integer, if possible
+            try:
+                numeric_value = int(odometer_reading)
+                odometer_values.append([first_column, numeric_value])
+            except ValueError:
+                # Skip values that cannot be converted to int
+                continue
+
+    # Finding the entry with the highest mileage
+    if odometer_values:
+        highest_mileage_entry = max(odometer_values, key=lambda x: x[1])
+    else:
+        highest_mileage_entry = None
+
+    return highest_mileage_entry
+
+
 
 def checkBranded(html):
     #soup = BeautifulSoup(html, "html.parser")
@@ -72,7 +102,7 @@ def login(email, password):
         driver.find_element(By.ID, "password").send_keys(password)
         driver.find_element(By.XPATH, "//button[@type='submit']").click()
 
-        #input("Press enter to continue after MFA...")
+        input("Press enter to continue after MFA...")
 
         location_div = WebDriverWait(driver, 10).until(
         EC.presence_of_element_located((By.XPATH, "//*[contains(@class, 'location')]")))
@@ -142,9 +172,12 @@ def finalize_files(*paths):
         with open(path, 'a') as file:
             file.write(']')
 
-def dataProcessor(driver, data):
+def dataProcessor(driver, data, c300Check = False):
     vinDb = checkDb()
-
+    if c300Check:
+        mileInt = 300000
+    else:
+        mileInt = 132000
     ogoodPath = outputName("carArr")
     obadPath = outputName("badCarArr")
     goodPath = "./processed/"+ogoodPath
@@ -162,13 +195,19 @@ def dataProcessor(driver, data):
             is_first_bad_entry = False
             print("excluded", vehicle["vin"], "pagesrc")
         else:
-            odometerInt = getReadingArr(pageSrc)
+            getRead = getReadingArr(pageSrc)
+            try:
+                odometerInt = getRead[1]
+                ododate = getRead[0]
+            except Exception as e:
+                print(e)
+                odometerInt = None
             if odometerInt == None:
                 vehicle["reason"] = "reading not fine"
                 append_to_file(badPath, vehicle, is_first_bad_entry)
                 is_first_bad_entry = False
                 print("excluded", vehicle["vin"], "not find reading")
-            elif odometerInt > 132000: # MILE EXCLUSION INT
+            elif odometerInt > mileInt: # MILE EXCLUSION INT
                 vehicle["reason"] = "mile exclusion"
                 append_to_file(badPath, vehicle, is_first_bad_entry)
                 is_first_bad_entry = False
@@ -187,6 +226,7 @@ def dataProcessor(driver, data):
                     print("excluded", vehicle["vin"], "total loss exclusion")
                 else:
                     vehicle["reason"] = odometerInt
+                    vehicle["ododate"] = ododate
                     append_to_file(goodPath, vehicle, is_first_good_entry)
                     is_first_good_entry = False
                     print("included", vehicle["vin"], "good car")
@@ -226,7 +266,7 @@ def find_latest_file(directory, file_prefix):
         quit()
 
 
-def handler(bypass=False):
+def handler(bypass=False, c300Check = False):
     initVars("./credentials.json")
     driver = login(cEmail, cPass)
     dataCollector = []
@@ -245,7 +285,7 @@ def handler(bypass=False):
             print("unable continue json bad")
             quit()
         else:
-            dataProcessor(driver, data)
+            dataProcessor(driver, data, c300Check)
             print("finish main")
             return True
 
@@ -263,7 +303,7 @@ def testOneVin(vin):
             odometerInt = getReading(pageSrc)
             readingarr = getReadingArr(pageSrc)
             resultCheck = checkBranded(pageSrc)
-            print("vin: {} odometer: {} odometer2: {} result: {}".format(vin, odometerInt, readingarr, resultCheck))
+            print("vin: {} odometer: {} odometer2: {} date: {} result: {}".format(vin, odometerInt, readingarr[1], readingarr[0], resultCheck))
         
 
 def initVars(path):
@@ -278,7 +318,7 @@ if __name__ == "__main__":
     #print(fileName)
     #print(find_latest_file("./", "salesdata"))
     handler()
-    #testOneVin("2GCEK19T541183036")
+    #testOneVin("KM8J3CA46JU730242")
     #checkDb()
     #file = input("Input Json: ")
     #data = jsonProcessor(file)
