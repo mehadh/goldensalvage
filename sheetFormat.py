@@ -11,7 +11,7 @@ import shutil
 
 SERVICE_ACCOUNT_FILE = 'gkey.json'
 SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
-SPREADSHEET_ID = '1zKOaioAQzaGsgEJtt_q27IsVTzQZnMS4cjlYr3T2RX4'
+SPREADSHEET_ID = 'changeme'
 creds = Credentials.from_service_account_file(SERVICE_ACCOUNT_FILE, scopes=SCOPES)
 service = build('sheets', 'v4', credentials=creds)
 
